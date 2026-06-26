@@ -19,18 +19,31 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
+// Parse CLIENT_ORIGIN into an array if it contains commas, or just use it directly
+const allowedOrigins = CLIENT_ORIGIN.split(',').map(o => o.trim());
+
 // Configure Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: CLIENT_ORIGIN,
-    methods: ['GET', 'POST']
+    origin: CLIENT_ORIGIN === '*' ? '*' : allowedOrigins,
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
 
 
 // Middleware
 app.use(express.json());
-app.use(cors({ origin: CLIENT_ORIGIN }));
+app.use(cors({ 
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin) || CLIENT_ORIGIN === '*') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }, 
+  credentials: true 
+}));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -57,5 +70,5 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log(`Server is running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
