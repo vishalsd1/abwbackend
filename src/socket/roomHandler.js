@@ -106,4 +106,39 @@ export const setupRoomHandlers = (io, socket) => {
       socket.join(roomId);
     }
   });
+
+  // --- WebRTC Group Calling ---
+
+  // When a user initiates/joins an active WebRTC call in a room
+  socket.on('join-call', ({ roomId, userId, user }) => {
+    // Join a specific call-room to separate chat vs call traffic if desired, 
+    // but using the existing roomId is fine.
+    // Broadcast to others in the room that this user joined the call
+    socket.to(roomId).emit('user-joined-call', { userId, user, socketId: socket.id });
+  });
+
+  // Relay signaling data (offers, answers, ICE candidates) between peers
+  socket.on('webrtc-signal', (payload) => {
+    // payload: { targetSocketId, callerId, signal }
+    io.to(payload.targetSocketId).emit('webrtc-signal', {
+      callerId: payload.callerId,
+      callerSocketId: socket.id,
+      signal: payload.signal,
+    });
+  });
+
+  // When a user leaves a call
+  socket.on('leave-call', ({ roomId, userId }) => {
+    socket.to(roomId).emit('user-left-call', { userId, socketId: socket.id });
+  });
+  
+  // Cleanup on disconnect is handled by Socket.io, 
+  // but we can broadcast a general disconnect
+  socket.on('disconnecting', () => {
+    for (const room of socket.rooms) {
+      if (room !== socket.id) {
+        socket.to(room).emit('user-left-call', { socketId: socket.id });
+      }
+    }
+  });
 };
