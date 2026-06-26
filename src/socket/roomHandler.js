@@ -109,6 +109,11 @@ export const setupRoomHandlers = (io, socket) => {
 
   // --- WebRTC Group Calling ---
 
+  // When a user initiates a call
+  socket.on('start-video-call', ({ roomId, userName }) => {
+    socket.to(roomId).emit('incoming-call', { roomId, userName });
+  });
+
   // When a user initiates/joins an active WebRTC call in a room
   socket.on('join-call', ({ roomId, userId, user }) => {
     // Join a specific call-room to separate chat vs call traffic if desired, 
