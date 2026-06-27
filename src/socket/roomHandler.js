@@ -107,6 +107,14 @@ export const setupRoomHandlers = (io, socket) => {
     }
   });
 
+  socket.on('meeting-message', (data) => {
+    socket.to(data.roomId).emit('meeting-message-received', data);
+  });
+
+  socket.on('raise-hand', (data) => {
+    socket.to(data.roomId).emit('hand-raised-received', data);
+  });
+
   // --- WebRTC Group Calling ---
 
   // When a user initiates a call
